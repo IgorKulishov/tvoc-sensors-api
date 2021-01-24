@@ -1,0 +1,75 @@
+org: igorkulishov
+app: tvoc-sensor-app
+service: tvoc-sensor-api
+
+frameworkVersion: ">=1.1.0 <2.0.0"
+
+plugins:
+  - serverless-mocha-plugin
+
+provider:
+  name: aws
+  runtime: nodejs10.x
+  environment:
+    DYNAMODB_TVOC_SENSOR_RECORDS: ${self:service}-${opt:stage, self:provider.stage}-tvoc-sensor
+    ACCESS_TOKEN_SECRET: 'secret.key'
+
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:Query
+        - dynamodb:Scan
+        - dynamodb:GetItem
+        - dynamodb:PutItem
+        - dynamodb:UpdateItem
+        - dynamodb:DeleteItem
+      Resource:
+        - "arn:aws:dynamodb:${opt:region, self:provider.region}:*:table/${self:provider.environment.DYNAMODB_TVOC_SENSOR_RECORDS}"
+        - "arn:aws:dynamodb:${opt:region, self:provider.region}:*:table/${self:provider.environment.DYNAMODB_TVOC_SENSOR_RECORDS}/index/*"
+
+functions:
+
+  create:
+    handler: sensors/add-record.create
+    events:
+      - http:
+          path: sensor-records
+          method: post
+          cors: true
+          integration: LAMBDA
+
+  list:
+    handler: sensors/scan-records.list
+    events:
+      - http:
+          path: sensor-records
+          method: get
+          cors: true
+          integration: LAMBDA
+
+resources:
+  Resources:
+    TvocSensorsRecords:
+      Type: 'AWS::DynamoDB::Table'
+      DeletionPolicy: Retain
+      Properties:
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        TableName: ${self:provider.environment.DYNAMODB_TVOC_SENSOR_RECORDS}
+# Required for CORS
+    GatewayResponseDefault4XX:
+      Type: 'AWS::ApiGateway::GatewayResponse'
+      Properties:
+        ResponseParameters:
+          gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
+          gatewayresponse.header.Access-Control-Allow-Headers: "'*'"
+        ResponseType: DEFAULT_4XX
+        RestApiId:
+          Ref: 'ApiGatewayRestApi'
