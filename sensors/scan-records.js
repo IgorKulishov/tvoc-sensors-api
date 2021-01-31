@@ -1,0 +1,26 @@
+'use strict';
+// const auth = require('../auth/auth');
+
+const AWS = require('aws-sdk'); // eslint-disable-line import/no-extraneous-dependencies
+const dynamoDb = new AWS.DynamoDB.DocumentClient({ region: "us-east-1" });
+
+module.exports.list = (event, context, callback) => {
+  // For testing purposes need to instantiate Tadle inside function with region defined
+
+  const params = {
+    TableName: process.env.DYNAMODB_TVOC_SENSOR_RECORDS
+  };
+  dynamoDb.scan(params, (error, result) => {
+    // handle potential errors
+    if (error) {
+      console.error(error);
+      callback({
+        statusCode: error.statusCode || 501,
+        headers: { 'Content-Type': 'text/plain' },
+        body: 'Couldn\'t fetch the orders.'
+      }, null);
+      return;
+    }
+    callback(null, result.Items);
+  });
+};
