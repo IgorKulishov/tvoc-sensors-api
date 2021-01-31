@@ -1,4 +1,11 @@
+# Welcome to Serverless!
+#
+# For full config options, check the docs:
+#    docs.serverless.com
+#
+
 service: tvoc-api
+# app and org for use with dashboard.serverless.com
 app: tvoc-api
 org: igorkulishov
 
@@ -22,6 +29,10 @@ provider:
         - "arn:aws:dynamodb:${opt:region, self:provider.region}:*:table/${self:provider.environment.DYNAMODB_TVOC_SENSOR_RECORDS}/index/*"
 
 functions:
+  auth:
+    handler: auth/auth.auth
+    cors: true
+
   create:
     handler: sensors/add-record.create
     events:
@@ -29,6 +40,7 @@ functions:
           path: sensor-records
           method: post
           cors: true
+          authorizer: auth
           integration: LAMBDA
 
   list:
